@@ -489,9 +489,17 @@ func (d *decodeState) object(v reflect.Value) {
 		start := d.off - 1
 		op = d.scanWhile(scanContinue)
 		item := d.data[start : d.off-1]
-		key, ok := unquote(item)
-		if !ok {
-			d.error(errPhase)
+		var key string
+		if item[0] == '"' {
+			// Proper json: {"key":"value"}.
+			var ok bool
+			key, ok = unquote(item)
+			if !ok {
+				d.error(errPhase)
+			}
+		} else {
+			// Improper json: {key:"value"}
+			key = string(item)
 		}
 
 		// Figure out field corresponding to key.

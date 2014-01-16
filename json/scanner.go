@@ -14,6 +14,7 @@ package json
 // before diving into the scanner itself.
 
 import "strconv"
+import "unicode"
 
 // checkValid verifies that data is valid JSON-encoded data.
 // scan is passed in for use by checkValid to avoid an allocation.
@@ -258,6 +259,10 @@ func stateBeginString(s *scanner, c int) int {
 		s.step = stateInString
 		return scanBeginLiteral
 	}
+	if unicode.IsLetter(rune(c)) {
+		s.step = stateInKey
+		return scanBeginLiteral
+	}
 	return s.error(c, "looking for beginning of object key string")
 }
 
@@ -334,6 +339,20 @@ func stateInString(s *scanner, c int) int {
 		return s.error(c, "in string literal")
 	}
 	return scanContinue
+}
+
+// stateInKey is the state after `{` or `key:"value",`
+func stateInKey(s *scanner, c int) int {
+	n := len(s.parseState)
+	if c == ':' {
+		s.parseState[n-1] = parseObjectValue
+		s.step = stateBeginValue
+		return scanObjectKey
+	}
+	if unicode.IsLetter(rune(c)) || unicode.IsDigit(rune(c)) || c == '_' {
+		return scanContinue
+	}
+	return s.error(c, "in object key")
 }
 
 // stateInStringEsc is the state after reading `"\` during a quoted string.
