@@ -369,7 +369,7 @@ func (e *encodeState) reflectValueQuoted(v reflect.Value, quoted bool) {
 			} else {
 				e.WriteByte(',')
 			}
-			e.string(f.name)
+			e.stringQuoted(f.name, false)
 			e.WriteByte(':')
 			e.reflectValueQuoted(fv, f.quoted)
 		}
@@ -489,8 +489,13 @@ func (sv stringValues) Less(i, j int) bool { return sv.get(i) < sv.get(j) }
 func (sv stringValues) get(i int) string   { return sv[i].String() }
 
 func (e *encodeState) string(s string) (int, error) {
+	return e.stringQuoted(s, true)
+}
+func (e *encodeState) stringQuoted(s string, quoted bool) (int, error) {
 	len0 := e.Len()
-	e.WriteByte('"')
+	if quoted {
+		e.WriteByte('"')
+	}
 	start := 0
 	for i := 0; i < len(s); {
 		if b := s[i]; b < utf8.RuneSelf {
@@ -533,7 +538,9 @@ func (e *encodeState) string(s string) (int, error) {
 	if start < len(s) {
 		e.WriteString(s[start:])
 	}
-	e.WriteByte('"')
+	if quoted {
+		e.WriteByte('"')
+	}
 	return e.Len() - len0, nil
 }
 
